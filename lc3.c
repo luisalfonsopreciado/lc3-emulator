@@ -96,6 +96,12 @@ enum
     MR_DDR = 0xFE06   /* display data*/
 };
 
+/* Print registers (Debugging )*/
+void print_registers()
+{
+     printf("PC: %x\nR0: %x, R1 : %x, R2: %x, R3: %x\nR4 : %x, R5 : %x, R6 : %x, R7 : %x\n", reg[R_PC], reg[R_R0], reg[R_R1], reg[R_R2], reg[R_R3], reg[R_R4], reg[R_R5], reg[R_R6], reg[R_R7]);
+}
+
 /* UNIX specific keyboard check */
 uint16_t check_key()
 {
@@ -310,10 +316,10 @@ void load_lc3_os()
     }
 
     i = 0;
-    
+
     // Fill in halt message
     char *haltMessage = "\n----- Halting the processor ----- \n\0";
-    for (char *p = inputPrompt; *p != '\0'; p++)
+    for (char *p = haltMessage; *p != '\0'; p++)
     {
         mem_write(0xFD80 + i, *p);
         i++;
@@ -454,8 +460,6 @@ int main(int argc, char **argv)
 
     /* Load the Operating System */
     load_lc3_os();
-
-    print_mem(0x0020, 0x0025);
 
     /* Load the obj files into memory */
     for (int j = 1; j < argc; ++j)
@@ -726,7 +730,7 @@ codes are set, based on whether the value loaded is negative, zero, or positive.
                 return 0;
             }
     }
-    // printf("PC: %x\nR0: %x, R1 : %x, R2: %x, R3: %x\nR4 : %x, R5 : %x, R6 : %x, R7 : %x\n", reg[R_PC], reg[R_R0], reg[R_R1], reg[R_R2], reg[R_R3], reg[R_R4], reg[R_R5], reg[R_R6], reg[R_R7]);
+   
     /* Shutdown */
     restore_input_buffering();
 }
