@@ -227,11 +227,12 @@ uint16_t mem_read(uint16_t addr)
 void mem_write(uint16_t address, uint16_t val)
 {
     memory[address] = val;
+    
     /*A character written in the low byte of the device data register will be displayed on the screen.*/
     if (address == MR_DDR)
     {
-        // printf("w");
         putc((char)val, stdout);
+        fflush(stdout);
     }
 }
 
@@ -380,7 +381,7 @@ console. Its ASCII code is copied into RO. The high eight bits of RO are cleared
         /* Halt execution and print a message on the console. */
         puts("HALT");
         fflush(stdout);
-        running = 0;
+        mem_write(MR_MCR, 0);
     }
     break;
     case TRAP_IN:
@@ -494,14 +495,7 @@ int main(int argc, char **argv)
     /* While the Machine Control Register bit 15 is set */
     while (mem_read(MR_MCR) & 1 << 15)
     {
-
-        // if (reg[R_PC] == 0x3002)
-        // {
-        //     // print_mem(0x0464, 0x0467);
-        //     // print_registers();
-        //     return 1;
-        // }
-        /* Fetch the instruction from memory and increment PC */
+       /* Fetch the instruction from memory and increment PC */
         uint16_t instr = mem_read(reg[R_PC]++);
         uint16_t op_code = instr >> 12;
 
@@ -752,7 +746,7 @@ codes are set, based on whether the value loaded is negative, zero, or positive.
                 reg[R_PC] = mem_read(trap_vect);
 
                 /* Handle trap instructions natively */
-                // trap(trap_vect);
+                //trap(trap_vect);
             }
             break;
             default:
