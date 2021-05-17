@@ -14,7 +14,7 @@
 
 #define FLAG_COUNT 3
 #define TRAP_VECT_SZ 6
-#define TRAP_GETC_SZ 8
+#define TRAP_GETC_SZ 9
 #define TRAP_OUT_SZ 10
 #define TRAP_PUTS_SZ 20
 #define TRAP_IN_SZ 8
@@ -93,13 +93,14 @@ enum
     MR_KBSR = 0xFE00, /* keyboard status */
     MR_KBDR = 0xFE02, /* keyboard data */
     MR_DSR = 0xFE04,  /* display status */
-    MR_DDR = 0xFE06   /* display data*/
+    MR_DDR = 0xFE06,  /* display data*/
+    MR_MCR = 0xFFFE   /* machine control*/
 };
 
 /* Print registers (Debugging )*/
 void print_registers()
 {
-     printf("PC: %x\nR0: %x, R1 : %x, R2: %x, R3: %x\nR4 : %x, R5 : %x, R6 : %x, R7 : %x\n", reg[R_PC], reg[R_R0], reg[R_R1], reg[R_R2], reg[R_R3], reg[R_R4], reg[R_R5], reg[R_R6], reg[R_R7]);
+    printf("PC: %x PSR: %x CC: %x\nR0: %x, R1 : %x, R2: %x, R3: %x\nR4 : %x, R5 : %x, R6 : %x, R7 : %x\n", reg[R_PC], reg[R_PSR], reg[R_COND], reg[R_R0], reg[R_R1], reg[R_R2], reg[R_R3], reg[R_R4], reg[R_R5], reg[R_R6], reg[R_R7]);
 }
 
 /* UNIX specific keyboard check */
@@ -226,6 +227,12 @@ uint16_t mem_read(uint16_t addr)
 void mem_write(uint16_t address, uint16_t val)
 {
     memory[address] = val;
+    /*A character written in the low byte of the device data register will be displayed on the screen.*/
+    if (address == MR_DDR)
+    {
+        // printf("w");
+        putc((char)val, stdout);
+    }
 }
 
 /* Load LC3 OS */
@@ -234,8 +241,8 @@ void load_lc3_os()
     uint16_t trap_vector_table_entries[TRAP_VECT_SZ] = {0x0020, 0x0021, 0x0022, 0x0023, 0x0024, 0x0025};
     uint16_t trap_vector_table_values[TRAP_VECT_SZ] = {0x0400, 0x0430, 0x0450, 0x04A0, 0x04E0, 0xFD70};
 
-    uint16_t trap_getc_entries[TRAP_GETC_SZ] = {0x0400, 0x0401, 0x0402, 0x0403, 0x0404, 0x0405, 0x0406, 0x0407};
-    uint16_t trap_getc_values[TRAP_GETC_SZ] = {0x3E07, 0xA004, 0x07FE, 0xA003, 0x2E03, 0xC1C0, 0xFE00, 0xFE02};
+    uint16_t trap_getc_entries[TRAP_GETC_SZ] = {0x0400, 0x0401, 0x0402, 0x0403, 0x0404, 0x0405, 0x0406, 0x0407, 0x0408};
+    uint16_t trap_getc_values[TRAP_GETC_SZ] = {0x3E07, 0xA004, 0x07FE, 0xA003, 0x2E03, 0xC1C0, 0xFE00, 0xFE02, 0x3003};
 
     uint16_t trap_out_entries[TRAP_OUT_SZ] = {0x0430, 0x0431, 0x0432, 0x0433, 0x0434, 0x0435, 0x0436, 0x0437, 0x0438, 0x0439};
     uint16_t trap_out_values[TRAP_OUT_SZ] = {0x3E0A, 0x3208, 0xA205, 0x07FE, 0xB004, 0x2204, 0x2E04, 0xC1C0, 0xFE04, 0xFE06};
@@ -250,7 +257,7 @@ void load_lc3_os()
     uint16_t trap_putsp_values[TRAP_PUTSP_SZ] = {0x3E27, 0x3022, 0x3222, 0x3422, 0x3622, 0x1220, 0x6040, 0x0406, 0x480D, 0x2418, 0x5002, 0x0402, 0x1261, 0x0FF8, 0x2014, 0x4806, 0x2013, 0x2213, 0x2413, 0x2613, 0x2E13, 0xC1C0, 0x3E06, 0xA607, 0x0801, 0x0FFC, 0xB003, 0x2E01, 0xC1C0, 0xFE06, 0xFE04, 0xF3FD, 0xF3FE, 0xFF00};
 
     uint16_t trap_halt_entries[TRAP_HALT_SZ] = {0xFD00, 0xFD01, 0xFD02, 0xFD03, 0xFD04, 0xFD05, 0xFD06, 0xFD07, 0xFD08, 0xFD09, 0xFD70, 0xFD71, 0xFD72, 0xFD73, 0xFD74, 0xFD75, 0xFD76, 0xFD77, 0xFD78, 0xFD79, 0xFD7A, 0xFD7B, 0xFD7C};
-    uint16_t trap_halt_values[TRAP_HALT_SZ] = {0x3E3E, 0x303C, 0x2007, 0xF021, 0xE006, 0xF022, 0xF025, 0x2036, 0x2E36, 0xC1C0, 0x3E0E, 0x320C, 0x300A, 0x300A, 0xF022, 0xA22F, 0x202F, 0x5040, 0xB02C, 0x2003, 0x2203, 0x2E03, 0xC1C0};
+    uint16_t trap_halt_values[TRAP_HALT_SZ] = {0x3E3E, 0x303C, 0x2007, 0xF021, 0xE006, 0xF022, 0xF025, 0x2036, 0x2E36, 0xC1C0, 0x3E0E, 0x320C, 0x300A, 0xE00C, 0xF022, 0xA22F, 0x202F, 0x5040, 0xB02C, 0x2003, 0x2203, 0x2E03, 0xC1C0};
 
     /* Write trap vector to memory */
     for (int i = 0; i < TRAP_VECT_SZ; i++)
@@ -484,8 +491,16 @@ int main(int argc, char **argv)
 
     running = 1;
 
-    while (running)
+    /* While the Machine Control Register bit 15 is set */
+    while (mem_read(MR_MCR) & 1 << 15)
     {
+
+        // if (reg[R_PC] == 0x3002)
+        // {
+        //     // print_mem(0x0464, 0x0467);
+        //     // print_registers();
+        //     return 1;
+        // }
         /* Fetch the instruction from memory and increment PC */
         uint16_t instr = mem_read(reg[R_PC]++);
         uint16_t op_code = instr >> 12;
@@ -535,10 +550,11 @@ int main(int argc, char **argv)
         break;
         case OP_LD:
         {
-            /* An address is computed by sign-extending bits [8:0] to 16 bits and adding this
-            value to the incremented PC. The contents of memory at this address are loaded
-            into DR. The condition codes are set, based on whether the value loaded is
-            negative, zero, or positive. 
+            /* 
+                An address is computed by sign-extending bits [8:0] to 16 bits and adding this
+                value to the incremented PC. The contents of memory at this address are loaded
+                into DR. The condition codes are set, based on whether the value loaded is
+                negative, zero, or positive. 
             */
             uint16_t R_DEST = (instr >> 9) & 0x7;
             uint16_t PC_OFFSET = sign_extend(instr & 0x1FF, 9);
@@ -548,7 +564,8 @@ int main(int argc, char **argv)
         break;
         case OP_ST:
         {
-            /*  The contents of the register specified by SR are stored in the memory location
+            /*  
+                The contents of the register specified by SR are stored in the memory location
                 whose address is computed by sign-extending bits [8:0] to 16 bits and adding this
                 value to the incremented PC.
             */
@@ -599,10 +616,12 @@ int main(int argc, char **argv)
         break;
         case OP_LDR:
         {
-            /*An address is computed by sign-extending bits [5:0] to 16 bits and adding this
-value to the contents of the register specified by bits [8:6]. The contents of memory
-at this address are loaded into DR. The condition codes are set, based on whether
-the value loaded is negative, zero, or positive.*/
+            /*
+                An address is computed by sign-extending bits [5:0] to 16 bits and adding this
+                value to the contents of the register specified by bits [8:6]. The contents of memory
+                at this address are loaded into DR. The condition codes are set, based on whether
+                the value loaded is negative, zero, or positive.
+            */
             uint16_t R_DR = (instr >> 9) & 0x7;
             uint16_t R_BASE = (instr >> 6) & 0x7;
             reg[R_DR] = mem_read(reg[R_BASE] + sign_extend(instr & 0x3F, 6));
@@ -610,21 +629,27 @@ the value loaded is negative, zero, or positive.*/
         }
         break;
         case OP_STR:
-        { /*The contents of the register specified by SR are stored in the memory location
-whose address is computed by sign-extending bits [5:0] to 16 bits and adding this
-value to the contents of the register specified by bits [8:6].*/
+        { 
+            /*
+                The contents of the register specified by SR are stored in the memory location
+                whose address is computed by sign-extending bits [5:0] to 16 bits and adding this
+                value to the contents of the register specified by bits [8:6].
+            */
             uint16_t R_SR = (instr >> 9) & 0x7;
             uint16_t R_BASE = (instr >> 6) & 0x7;
             mem_write(reg[R_BASE] + sign_extend(instr & 0x3F, 6), reg[R_SR]);
         }
         break;
         case OP_RTI:
-        { /*If the processor is running in Supervisor mode, the top two elements on the
-            Supervisor Stack are popped and loaded into PC, PSR. If the processor is running
-            in User mode, a privilege mode violation exception occurs.
-          */
-            // PSR[15] = 0 in Supervisor Mode
+            { 
+            /*
+                If the processor is running in Supervisor mode, the top two elements on the
+                Supervisor Stack are popped and loaded into PC, PSR. If the processor is running
+                in User mode, a privilege mode violation exception occurs.
+            */
+            
             uint16_t sup_mode = (reg[R_PSR] >> 15) & 1;
+            // PSR[15] = 0 in Supervisor Mode
             if (sup_mode == 0)
             {
                 // Pop PC from supervisor stack
@@ -722,7 +747,12 @@ codes are set, based on whether the value loaded is negative, zero, or positive.
                     the memory location whose address is obtained by zero-extending trapvector8 to
                     16 bits.
                 */
-                trap(instr & 0xFF);
+                uint16_t trap_vect = (instr & 0xFF);
+                reg[R_R7] = reg[R_PC];
+                reg[R_PC] = mem_read(trap_vect);
+
+                /* Handle trap instructions natively */
+                // trap(trap_vect);
             }
             break;
             default:
@@ -730,7 +760,7 @@ codes are set, based on whether the value loaded is negative, zero, or positive.
                 return 0;
             }
     }
-   
+
     /* Shutdown */
     restore_input_buffering();
 }
